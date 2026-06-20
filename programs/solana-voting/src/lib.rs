@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use std::str::pattern::StrSearcher;
+use anchor_lang::clock::Clock;
 
 declare_id!("BTzpSv33D4FcRcGT8urd1MJF9SkN3sneRD21e7hB8v86");
 
@@ -8,7 +9,7 @@ pub mod solana_voting {
     use super::*;
 
     pub fn init_poll(ctx: Context<InitPoll>, _poll_id: u64, start: u64, end: u64, name: String, description: String) -> Result<()> {
-        let poll = &mut Account<' _, PollAccount> = & mut ctx.accounts.poll_account;
+        let poll = &mut Account<' _, PollAccount> = &mut ctx.accounts.poll_account;
         poll.poll_description = description;
         poll.poll_voting_start = start;
         poll.poll_voting_end = end;
@@ -25,8 +26,21 @@ pub mod solana_voting {
         Ok(())
     }
 
-    pub fn vote(ctx: Context<Vote>) -> Result<()> {
-        
+    pub fn vote(ctx: Context<Vote>, _poll_id: u64, candidate: String) -> Result<()> {
+        let candidate: &mut Account<' _, CandidateAccount> = &mut ctx.accounts.candidate_account;
+
+        let current_time: i64 = Clock::get()?.unix_timestamp;
+
+        if current_time > ctx.accounts.poll_account.poll_voting_end {
+            return Err(ErrorCode::VotingEnded.into());
+        }
+
+        if current_time <= ctx.accounts.poll_account.poll_voting_start {
+            return Err(ErrorCode::VotingNotStarted.into());
+        }
+
+        candidate.candidate_votes += 1;
+        Ok(())
     }
 }
 
@@ -107,4 +121,12 @@ pub struct CandidateAccount {
     #[max_len(32)]
     pub candidate_name: String,
     pub candidate_votes: u64,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Voting has not started yet")]
+    VotingNotStarted,
+    #[msg("Voting has ended")]
+    VotingEnded,
 }
