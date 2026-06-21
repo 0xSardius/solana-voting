@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::clock::Clock;
 
 declare_id!("BTzpSv33D4FcRcGT8urd1MJF9SkN3sneRD21e7hB8v86");
 
@@ -30,11 +29,11 @@ pub mod solana_voting {
 
         let current_time: i64 = Clock::get()?.unix_timestamp;
 
-        if current_time > ctx.accounts.poll_account.poll_voting_end {
+        if current_time > ctx.accounts.poll_account.poll_voting_end as i64 {
             return Err(ErrorCode::VotingEnded.into());
         }
 
-        if current_time <= ctx.accounts.poll_account.poll_voting_start {
+        if current_time < ctx.accounts.poll_account.poll_voting_start as i64 {
             return Err(ErrorCode::VotingNotStarted.into());
         }
 
@@ -45,7 +44,7 @@ pub mod solana_voting {
 
 #[derive(Accounts)]
 #[instruction(poll_id: u64)]
-pub struct InitPoll {
+pub struct InitPoll<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -62,7 +61,7 @@ pub struct InitPoll {
 
 #[derive(Accounts)]
 #[instruction(poll_id: u64, candidate: String)]
-pub struct InitializeCandidate {
+pub struct InitializeCandidate<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -85,7 +84,7 @@ pub struct InitializeCandidate {
 
 #[derive(Accounts)]
 #[instruction(poll_id: u64, candidate: String)]
-pub struct Vote {
+pub struct Vote<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
